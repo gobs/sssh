@@ -29,4 +29,6 @@ Then use one of the methods in ssh.Session (https://godoc.org/golang.org/x/crypt
 		...
 	}
 
-Additional documentation is available at https://godoc.org/github.com/gobs/sssh
+Additional documentation is available at https://godoc.org/github.com/gobs/sssh.
+
+A working example is available in the cmd/sssh subfolder.
