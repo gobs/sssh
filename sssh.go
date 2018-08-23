@@ -15,7 +15,6 @@ package sssh
 
 import (
 	"io/ioutil"
-	"log"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/proxy"
@@ -63,6 +62,14 @@ func PrivateKey(keyFile string) ConnectOption {
 	}
 }
 
+// Banner sets the banner callback, called when the remote host sends the banner
+func Banner(callback ssh.BannerCallback) ConnectOption {
+	return func(c *sshConfig) error {
+		c.clientConfig.BannerCallback = callback
+		return nil
+	}
+}
+
 // SocksProxy sets the (socks5) proxy address (host:port)
 func SocksProxy(proxy string) ConnectOption {
 	return func(c *sshConfig) error {
@@ -76,11 +83,6 @@ func NewSession(host string, options ...ConnectOption) (*ssh.Session, error) {
 	config := sshConfig{
 		clientConfig: &ssh.ClientConfig{
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(), // ssh.FixedHostKey(hostKey),
-			BannerCallback: func(message string) error {
-				log.Println("Connected")
-				//log.Println(message)
-				return nil
-			},
 		},
 	}
 

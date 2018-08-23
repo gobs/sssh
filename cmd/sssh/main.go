@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -21,6 +22,7 @@ func main() {
 	flag.StringVar(&username, "user", username, "user name")
 	flag.StringVar(&password, "password", password, "user password")
 	flag.StringVar(&privateKey, "key", privateKey, "authentication private key")
+	banner := flag.Bool("banner", false, "print remote host banner")
 	flag.Parse()
 
 	options := []sssh.ConnectOption{
@@ -37,6 +39,13 @@ func main() {
 
 	if proxyAddr != "" {
 		options = append(options, sssh.SocksProxy(proxyAddr))
+	}
+
+	if *banner {
+		options = append(options, sssh.Banner(func(message string) error {
+			fmt.Println(message)
+			return nil
+		}))
 	}
 
 	session, err := sssh.NewSession(serviceAddr, options...)
