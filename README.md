@@ -28,3 +28,5 @@ Then use one of the methods in ssh.Session (https://godoc.org/golang.org/x/crypt
 	if err = session.Run("ls -l"); err != nil {
 		...
 	}
+
+Additional documentation is available at https://godoc.org/github.com/gobs/sssh
