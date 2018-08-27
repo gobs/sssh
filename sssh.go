@@ -44,14 +44,27 @@ func Password(password string) ConnectOption {
 	}
 }
 
-// PrivateKey sets the private key file for authentication
-func PrivateKey(keyFile string) ConnectOption {
+// PrivateKeyFile sets the private key file for authentication
+func PrivateKeyFile(keyFile string) ConnectOption {
 	return func(c *sshConfig) error {
 		key, err := ioutil.ReadFile(keyFile)
 		if err != nil {
 			return err
 		}
 
+		signer, err := ssh.ParsePrivateKey(key)
+		if err != nil {
+			return err
+		}
+
+		c.clientConfig.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+		return nil
+	}
+}
+
+// PrivateKey sets the private key for authentication
+func PrivateKey(key []byte) ConnectOption {
+	return func(c *sshConfig) error {
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
 			return err

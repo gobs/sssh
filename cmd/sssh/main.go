@@ -34,7 +34,7 @@ func main() {
 	}
 
 	if privateKey != "" {
-		options = append(options, sssh.PrivateKey(privateKey))
+		options = append(options, sssh.PrivateKeyFile(privateKey))
 	}
 
 	if proxyAddr != "" {
