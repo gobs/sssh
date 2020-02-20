@@ -22,6 +22,7 @@ func main() {
 	flag.StringVar(&username, "user", username, "user name")
 	flag.StringVar(&password, "password", password, "user password")
 	flag.StringVar(&privateKey, "key", privateKey, "authentication private key")
+	keyboard := flag.Bool("keyboard", false, "authentication via keyboard/interactive")
 	banner := flag.Bool("banner", false, "print remote host banner")
 	flag.Parse()
 
@@ -35,6 +36,19 @@ func main() {
 
 	if privateKey != "" {
 		options = append(options, sssh.PrivateKeyFile(privateKey))
+	}
+
+	if *keyboard {
+		options = append(options, sssh.KeyboardInteractive(
+			func(user, instruction string, questions []string, echos []bool) (answers []string, err error) {
+				fmt.Println("KeyboardInteractive challenge for", user)
+				fmt.Println("Instructions:", instruction)
+				for i, q := range questions {
+					fmt.Println("Question", i, q, echos[i])
+				}
+				answers = make([]string, len(questions))
+				return
+			}))
 	}
 
 	if proxyAddr != "" {

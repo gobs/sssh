@@ -39,7 +39,7 @@ func User(user string) ConnectOption {
 // Password sets the user password for authentication
 func Password(password string) ConnectOption {
 	return func(c *sshConfig) error {
-		c.clientConfig.Auth = []ssh.AuthMethod{ssh.Password(password)}
+		c.clientConfig.Auth = append(c.clientConfig.Auth, ssh.Password(password))
 		return nil
 	}
 }
@@ -57,7 +57,7 @@ func PrivateKeyFile(keyFile string) ConnectOption {
 			return err
 		}
 
-		c.clientConfig.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+		c.clientConfig.Auth = append(c.clientConfig.Auth, ssh.PublicKeys(signer))
 		return nil
 	}
 }
@@ -70,7 +70,18 @@ func PrivateKey(key []byte) ConnectOption {
 			return err
 		}
 
-		c.clientConfig.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+		c.clientConfig.Auth = append(c.clientConfig.Auth, ssh.PublicKeys(signer))
+		return nil
+	}
+}
+
+//type KeyboardInteractiveChallenge func(user, instruction string, questions []string, echos []bool) (answers []string, err error)
+type KeyboardInteractiveChallenge = ssh.KeyboardInteractiveChallenge
+
+// KeyboardInteractive sets the authentication mode to keyboar/interactive
+func KeyboardInteractive(cb KeyboardInteractiveChallenge) ConnectOption {
+	return func(c *sshConfig) error {
+		c.clientConfig.Auth = append(c.clientConfig.Auth, ssh.KeyboardInteractive(cb))
 		return nil
 	}
 }
