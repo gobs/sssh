@@ -12,12 +12,14 @@ import (
 
 func main() {
 	proxyAddr := ""
+	socksAddr := ""
 	serviceAddr := "localhost:22"
 	username := ""
 	password := ""
 	privateKey := ""
 
-	flag.StringVar(&proxyAddr, "proxy", proxyAddr, "proxy (socks5)")
+	flag.StringVar(&proxyAddr, "proxy", proxyAddr, "proxy address (ssh)")
+	flag.StringVar(&socksAddr, "socks", socksAddr, "proxy address (socks5)")
 	flag.StringVar(&serviceAddr, "addr", serviceAddr, "ssh address")
 	flag.StringVar(&username, "user", username, "user name")
 	flag.StringVar(&password, "password", password, "user password")
@@ -51,15 +53,19 @@ func main() {
 			}))
 	}
 
-	if proxyAddr != "" {
-		options = append(options, sssh.SocksProxy(proxyAddr))
-	}
-
 	if *banner {
 		options = append(options, sssh.Banner(func(message string) error {
 			fmt.Println(message)
 			return nil
 		}))
+	}
+
+	if socksAddr != "" {
+		options = append(options, sssh.SocksProxy(socksAddr))
+	}
+
+	if proxyAddr != "" {
+		options = append(options, sssh.JumpProxy(proxyAddr, options...))
 	}
 
 	session, err := sssh.NewSession(serviceAddr, options...)
