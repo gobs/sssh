@@ -15,7 +15,9 @@ package sssh
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -143,14 +145,24 @@ func JumpProxy(proxy string, options ...ConnectOption) ConnectOption {
 	}
 }
 
-// NewSession creats a new ssh session/connection to host (host:port) with the specified options
-func NewSession(host string, options ...ConnectOption) (*ssh.Session, error) {
+// NewClient creates a new ssh client/connection to host (host:port) with the specified options
+func NewClient(host string, options ...ConnectOption) (*ssh.Client, error) {
 	config, err := makeConfig(options...)
 	if err != nil {
 		return nil, err
 	}
 
 	client, err := sshClient(host, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// NewSession creates a new ssh session/connection to host (host:port) with the specified options
+func NewSession(host string, options ...ConnectOption) (*ssh.Session, error) {
+	client, err := NewClient(host, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,4 +209,110 @@ func sshClient(address string, config *sshConfig) (*ssh.Client, error) {
 	}
 
 	return ssh.Dial("tcp", address, config.clientConfig)
+}
+
+var (
+	ErrDir           = fmt.Errorf("source is a directory")
+	ErrRemote        = fmt.Errorf("remote error")
+	ErrRemoteFatal   = fmt.Errorf("remote fatal error")
+	ErrRemoteUnknown = fmt.Errorf("remote unknown error")
+)
+
+func CopyFile(client *ssh.Client, dest, src string) error {
+	f, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	if stat.IsDir() {
+		return ErrDir
+	}
+
+	return Copy(client, dest, stat.Name(), stat.Size(), stat.Mode().Perm()&os.ModePerm, f)
+}
+
+func Copy(client *ssh.Client, dest, src string, size int64, perm os.FileMode, reader io.Reader) error {
+	session, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+
+	defer session.Close()
+
+	rin, err := session.StdinPipe()
+	if err != nil {
+		return err
+	}
+
+	defer rin.Close()
+
+	rout, err := session.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	checkStatus := func() (err error) {
+		var b [256]byte
+
+		if _, err := rout.Read(b[:1]); err != nil {
+			return err
+		}
+
+		switch b[0] {
+		case 0:
+			err = nil
+
+		case 1, 2:
+			err = ErrRemote
+			if b[0] == 2 {
+				err = ErrRemoteFatal
+			}
+
+			n, _ := rout.Read(b[:])
+			if n > 0 {
+				fmt.Printf("Error %v: %v", err, string(b[:n]))
+			}
+
+		default:
+			err = ErrRemoteUnknown
+		}
+
+		return
+	}
+
+	if err = session.Start("scp -t " + dest); err != nil {
+		return err
+	}
+
+	cmd := fmt.Sprintf("C%04o %d %s\n", perm, size, src)
+
+	_, err = io.WriteString(rin, cmd)
+	if err != nil {
+		return err
+	}
+
+	if err = checkStatus(); err != nil {
+		return err
+	}
+
+	if _, err = io.Copy(rin, reader); err != nil {
+		return err
+	}
+
+	var z [1]byte
+	rin.Write(z[:]) // send \0 to finish
+
+	if err = checkStatus(); err != nil {
+		return err
+	}
+
+	rin.Close()
+	return session.Wait()
 }

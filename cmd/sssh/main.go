@@ -26,6 +26,7 @@ func main() {
 	flag.StringVar(&privateKey, "key", privateKey, "authentication private key")
 	keyboard := flag.Bool("keyboard", false, "authentication via keyboard/interactive")
 	banner := flag.Bool("banner", false, "print remote host banner")
+	copy := flag.Bool("cp", false, "copy input file to remote destination")
 	flag.Parse()
 
 	options := []sssh.ConnectOption{
@@ -68,18 +69,33 @@ func main() {
 		options = append(options, sssh.JumpProxy(proxyAddr, options...))
 	}
 
-	session, err := sssh.NewSession(serviceAddr, options...)
-	if err != nil {
-		log.Fatal(err)
-	}
+	if *copy {
+		if flag.NArg() != 1 {
+			log.Fatal("-cp requires one input file")
+		}
 
-	defer session.Close()
+		client, err := sssh.NewClient(serviceAddr, options...)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	command := strings.Join(flag.Args(), " ")
-	log.Println("ssh>", command)
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	if err = session.Run(command); err != nil {
-		log.Fatal("run command: ", err)
+		if err = sssh.CopyFile(client, flag.Arg(0), flag.Arg(0)); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		session, err := sssh.NewSession(serviceAddr, options...)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer session.Close()
+
+		command := strings.Join(flag.Args(), " ")
+		log.Println("ssh>", command)
+		session.Stdout = os.Stdout
+		session.Stderr = os.Stderr
+		if err = session.Run(command); err != nil {
+			log.Fatal("run command: ", err)
+		}
 	}
 }
