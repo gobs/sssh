@@ -82,7 +82,7 @@ func main() {
 		if err = sssh.CopyFile(client, flag.Arg(0), flag.Arg(0)); err != nil {
 			log.Fatal(err)
 		}
-	} else {
+	} else if flag.NArg() > 0 {
 		session, err := sssh.NewSession(serviceAddr, options...)
 		if err != nil {
 			log.Fatal(err)
@@ -91,11 +91,20 @@ func main() {
 		defer session.Close()
 
 		command := strings.Join(flag.Args(), " ")
-		log.Println("ssh>", command)
+		log.Printf("run %q", command)
 		session.Stdout = os.Stdout
 		session.Stderr = os.Stderr
 		if err = session.Run(command); err != nil {
 			log.Fatal("run command: ", err)
+		}
+	} else {
+		client, err := sssh.NewClient(serviceAddr, options...)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err = sssh.Shell(client); err != nil {
+			log.Fatal(err)
 		}
 	}
 }

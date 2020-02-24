@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
 )
 
@@ -313,5 +314,56 @@ func Copy(client *ssh.Client, dest, src string, size int64, perm os.FileMode, re
 	}
 
 	rin.Close()
+	return session.Wait()
+}
+
+func Shell(client *ssh.Client) error {
+	session, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+
+	defer session.Close()
+
+	session.Stdin = os.Stdin
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
+
+	stdin := int(os.Stdin.Fd())
+
+	if terminal.IsTerminal(stdin) {
+		state, err := terminal.MakeRaw(stdin)
+		if err != nil {
+			return err
+		}
+
+		defer terminal.Restore(stdin, state)
+
+		modes := ssh.TerminalModes{
+			ssh.ECHO:          1,
+			ssh.TTY_OP_ISPEED: 14400,
+			ssh.TTY_OP_OSPEED: 14400,
+		}
+
+		w, h, err := terminal.GetSize(stdin)
+		if err != nil {
+			return err
+		}
+
+		term := os.Getenv("TERM")
+		if term == "" {
+			term = "vt100"
+		}
+
+		if err := session.RequestPty(term, w, h, modes); err != nil {
+			return err
+		}
+	}
+
+	// Start remote shell
+	if err := session.Shell(); err != nil {
+		return err
+	}
+
 	return session.Wait()
 }
