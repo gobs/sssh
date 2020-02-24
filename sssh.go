@@ -18,6 +18,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -111,6 +112,10 @@ func Banner(callback ssh.BannerCallback) ConnectOption {
 
 // SocksProxy sets the (socks5) proxy address (host:port)
 func SocksProxy(proxy string) ConnectOption {
+	if !strings.Contains(proxy, ":") {
+		proxy = proxy + ":22"
+	}
+
 	return func(c *sshConfig) error {
 		c.proxyAddress = proxy
 		c.jumpConfig = nil
@@ -136,6 +141,10 @@ func makeConfig(options ...ConnectOption) (*sshConfig, error) {
 
 // JumpProxy configures the session to jump through one proxy server
 func JumpProxy(proxy string, options ...ConnectOption) ConnectOption {
+	if !strings.Contains(proxy, ":") {
+		proxy = proxy + ":22"
+	}
+
 	return func(c *sshConfig) (err error) {
 		c.proxyAddress = ""
 		c.jumpConfig, err = makeConfig(options...)
@@ -148,6 +157,10 @@ func JumpProxy(proxy string, options ...ConnectOption) ConnectOption {
 
 // NewClient creates a new ssh client/connection to host (host:port) with the specified options
 func NewClient(host string, options ...ConnectOption) (*ssh.Client, error) {
+	if !strings.Contains(host, ":") {
+		host = host + ":22"
+	}
+
 	config, err := makeConfig(options...)
 	if err != nil {
 		return nil, err
