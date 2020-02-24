@@ -189,7 +189,6 @@ func sshClient(address string, config *sshConfig) (*ssh.Client, error) {
 
 		return ssh.NewClient(c, chans, reqs), nil
 	} else if config.jumpConfig != nil {
-		fmt.Println("jump", config.jumpConfig, address)
 		proxy, err := ssh.Dial("tcp", config.jumpConfig.proxyAddress, config.jumpConfig.clientConfig)
 		if err != nil {
 			return nil, err
