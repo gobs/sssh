@@ -368,7 +368,7 @@ func Shell(client *ssh.Client) error {
 			term = "vt100"
 		}
 
-		if err := session.RequestPty(term, w, h, modes); err != nil {
+		if err := session.RequestPty(term, h, w, modes); err != nil {
 			return err
 		}
 	}
